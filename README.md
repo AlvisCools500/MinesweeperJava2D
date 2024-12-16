@@ -1,5 +1,6 @@
 # Minesweeper Java 2D
 After I made Minesweeper java that uses Scanner only, This is the sequel one.
+The one that I used Scanner only is just called MinesweeperJava in GitHub repo.
 
 # Controls
 Left Click to Dig, Right Click to put a Flag.
