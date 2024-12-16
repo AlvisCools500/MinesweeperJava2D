@@ -3,9 +3,9 @@ import java.util.HashMap;
 import java.util.Random;
 
 class GridSlot {
-    int X; // PosX
-    int Z; // PosZ
-    int V; // Value
+    int X;
+    int Z;
+    int V;
 }
 
 class GeneratedGrid {

@@ -7,31 +7,68 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
-class RectButton implements MouseListener {
+class SlotButton implements MouseListener {
     int PosX = 0;
     int PosY = 0;
     int Size = 10;
     int ID = 1;
-    Color Col;
+    boolean Light = false;
+    Vector2 PosGrid = new Vector2(0,0);
+    Color Col = new Color(255,0,255);
+
+    MainSettings mySettings = new MainSettings();
+
+    private GeneratedGrid genGrid;
+    private HashMap<Integer, HashMap<Integer, Integer>> DataGrid;
+    private HashMap<Integer, HashMap<Integer, Integer>> GameGrid;
+    private HashMap<Integer, HashMap<Integer, Integer>> FlagSlot;
 
     private Random rand = new Random();
 
-    public RectButton(int posX, int posY, int size, Color col) {
+    public SlotButton(int posX, int posY, int size, Color col, boolean light, Vector2 posGrid, GeneratedGrid GENGRID, HashMap<Integer, HashMap<Integer, Integer>> flagSlot) {
         this.PosX = posX;
         this.PosY = posY;
         this.Size = size;
-        this.Col = col;
+        this.Light = light;
+        this.PosGrid = posGrid;
+
+        genGrid = GENGRID;
+        DataGrid = genGrid.DataGrid;
+        GameGrid = genGrid.GameGrid;
+        FlagSlot = flagSlot;
     }
 
     public void draw(Graphics g) {
+        var ResVal = GridLib.GetSlotValue(GameGrid, PosGrid.x, PosGrid.y);
+
+        if (ResVal == -1) {
+            Col = mySettings.TileColor.get(2);
+        }else if (ResVal == -2) {
+            Col = mySettings.TileColor.get(1);
+        } else {
+            Col = mySettings.TileColor.get(0);
+        }
         g.setColor(Col);
         g.fillRect(PosX - (Size/2), PosY - (Size/2), Size, Size);
 
-        //g.setColor(Color.black);
-        //g.setFont(new Font("Arial", Font.BOLD, 20));
-        //g.drawString("" + ID, PosX, PosY);
+        if (!Light) {
+            g.setColor(new Color(0,0,0, 25));
+            g.fillRect(PosX - (Size/2), PosY - (Size/2), Size, Size);
+        }
 
-        mainModule.CenteredText(g, Color.black, new Font("Arial", Font.BOLD, 40), "" + ID, PosX, PosY);
+        if (ResVal > 0) {
+            MainModule.CenteredText(g, mySettings.WarnColor.get(ResVal), new Font("Arial", Font.BOLD, 40), "" + ResVal, PosX, PosY);
+        }else if (ResVal == -2) {
+            if (FlagSlot != null) {
+                if (GridLib.DoesExists(FlagSlot, PosGrid.x, PosGrid.y)) {
+                    Image img = mySettings.IMGAsset.get("Banner");
+                    g.drawImage(img, PosX - (Size/2), PosY - (Size/2), Size, Size, null);
+                }
+            }
+
+
+        }
+
     }
 
     @Override
@@ -40,11 +77,19 @@ class RectButton implements MouseListener {
         int MouseY = e.getY();
         var MouseClick = e.getButton();
 
-        if (MouseClick == MouseEvent.BUTTON1) {
-            if (MouseX >= PosX - (Size/2) && MouseX <= PosX + (Size/2) && MouseY >= PosY - (Size/2) && MouseY <= PosY + (Size/2)) {
-                Col = new Color(rand.nextInt(1,255), rand.nextInt(1,255), rand.nextInt(1,255));
+
+        if (MouseX >= PosX - (Size/2) && MouseX <= PosX + (Size/2) && MouseY >= PosY - (Size/2) && MouseY <= PosY + (Size/2)) {
+            if (MouseClick == MouseEvent.BUTTON1) {
+                if (!GridLib.DoesExists(FlagSlot, PosGrid.x, PosGrid.y)) {
+                    GridLib.Mine(GameGrid, DataGrid, PosGrid.x, PosGrid.y);
+                }
+            }else if (MouseClick == MouseEvent.BUTTON3) {
+                System.out.println("Flagging");
+                GridLib.Flag(FlagSlot, PosGrid.x, PosGrid.y);
             }
+
         }
+
 
     }
 
@@ -81,34 +126,30 @@ class Vector2 {
     }
 }
 
-class VectorGrid {
-    int x;
-    int y;
-    int width;
-    int height;
-
-    public VectorGrid(int X, int Y, int Width, int Height) {
-        this.x = X;
-        this.y = Y;
-        this.width = Width;
-        this.height = Height;
-    }
-}
-
 public class MainCanvas extends JPanel {
-    private final int ResolutionX = 800;
-    private final int ResolutionY = 800;
 
-    private final int MaxRow = 10;
-    private final int MaxColl = 10;
+
+    private final int MaxRow = MainSettings.GridY;
+    private final int MaxColl = MainSettings.GridX;
     private final int CellSiz = 50;
+
+    GeneratedGrid genGrid = MainModule.genGrid;
+    HashMap<Integer, HashMap<Integer, Integer>> DataGrid = genGrid.DataGrid;
+    HashMap<Integer, HashMap<Integer, Integer>> GameGrid = genGrid.GameGrid;
+    HashMap<Integer, HashMap<Integer, Integer>> FlagSlot = new HashMap<>();
+    ArrayList<GridSlot> MinesSlot = genGrid.MineSlot;
+
+    MainSettings mySettings = new MainSettings();
+
+    private final int ResolutionX = mySettings.Resolution.x;
+    private final int ResolutionY = mySettings.Resolution.y;
 
     private final Vector2 CenterPos = new Vector2(
             (ResolutionX/2) - (CellSiz/2),
             (ResolutionY/2) - (CellSiz/2)
     );
 
-    ArrayList<RectButton> ListButtons = new ArrayList<>();
+    ArrayList<SlotButton> ListButtons = new ArrayList<>();
     HashMap<Integer, HashMap<Integer, Vector2>> GridLayout = new HashMap<>();
 
     private Random rand = new Random();
@@ -116,12 +157,13 @@ public class MainCanvas extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g); // Clear the canvas before drawing
-        for (RectButton MyButton : ListButtons) {
+        for (SlotButton MyButton : ListButtons) {
             MyButton.draw(g);
         }
     }
 
     public MainCanvas() {
+        //GridLib.Print(DataGrid, mySettings.NumberType, FlagSlot);
 
         Vector2 StartPos = new Vector2(
                 CenterPos.x - (MaxRow * CellSiz) / 2,
@@ -129,6 +171,8 @@ public class MainCanvas extends JPanel {
         );
 
         int incrID = 1;
+
+        boolean isLight = false;
 
         for (int rows=1; rows<=MaxRow; rows++) {
             HashMap<Integer, Vector2> GridY = new HashMap<>();
@@ -138,11 +182,15 @@ public class MainCanvas extends JPanel {
 
                 GridY.put(colls, new Vector2(x, y));
 
-                RectButton MyButton = new RectButton(
+                SlotButton MyButton = new SlotButton(
                         x,
                         y,
                         CellSiz,
-                        new Color(rand.nextInt(1,255), rand.nextInt(1,255), rand.nextInt(1,255))
+                        new Color(rand.nextInt(1,255), rand.nextInt(1,255), rand.nextInt(1,255)),
+                        isLight,
+                        new Vector2(rows, colls),
+                        genGrid,
+                        FlagSlot
                 );
 
                 MyButton.ID = incrID;
@@ -151,9 +199,24 @@ public class MainCanvas extends JPanel {
                 ListButtons.add(MyButton);
 
                 incrID += 1;
+
+                if (isLight) {
+                    isLight = false;
+                }else {
+                    isLight = true;
+                }
             }
+
+            if (isLight) {
+                isLight = false;
+            }else {
+                isLight = true;
+            }
+
             GridLayout.put(rows, GridY);
         }
+
+        GridLib.Mine(GameGrid, DataGrid, genGrid.StartSlotX, genGrid.StartSlotZ);
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -168,9 +231,10 @@ public class MainCanvas extends JPanel {
     }
 
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Basic Canvas Drawing");
+        MainSettings mySettings = new MainSettings();
+        JFrame frame = new JFrame("Minesweeper Java 2D");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 800);
+        frame.setSize(mySettings.Resolution.x, mySettings.Resolution.y);
         frame.add(new MainCanvas()); // Add the canvas to the frame
         frame.setVisible(true);
     }

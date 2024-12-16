@@ -1,10 +1,8 @@
-import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 
-public class mainModule {
+public class MainModule {
+    public static GeneratedGrid genGrid = LevelGenerator.Generate(MainSettings.GridX, MainSettings.GridY, MainSettings.MultiplyMines);
+
     public static void CenteredText(Graphics g, Color col, Font font, String str, int PosX, int PosY) {
         g.setColor(col);
         g.setFont(font);
