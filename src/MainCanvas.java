@@ -84,7 +84,6 @@ class SlotButton implements MouseListener {
                     GridLib.Mine(GameGrid, DataGrid, PosGrid.x, PosGrid.y);
                 }
             }else if (MouseClick == MouseEvent.BUTTON3) {
-                System.out.println("Flagging");
                 GridLib.Flag(FlagSlot, PosGrid.x, PosGrid.y);
             }
 
