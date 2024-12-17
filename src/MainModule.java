@@ -1,4 +1,8 @@
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import java.awt.*;
+import java.io.InputStream;
 
 public class MainModule {
     public static GeneratedGrid genGrid = LevelGenerator.Generate(MainSettings.GridX, MainSettings.GridY, MainSettings.MultiplyMines);
@@ -16,5 +20,22 @@ public class MainModule {
                 (PosX - (Width/2)) ,
                 (PosY - (Height/2)) + metrics.getAscent()
         );
+    }
+
+    public static void PlaySound(MainSettings mySettings, String str) {
+        if (mySettings.SOUNDAsset.get(str) != null) {
+            try (InputStream inputstream = MainModule.class.getResourceAsStream(mySettings.SOUNDAsset.get(str))) {
+
+                AudioInputStream audioStream = AudioSystem.getAudioInputStream(inputstream);
+
+                Clip clip = AudioSystem.getClip();
+                clip.open(audioStream);
+                clip.start();
+            }catch (Exception e) {
+                e.printStackTrace();
+            }
+        }else {
+            System.out.println(str + " is not available!");
+        }
     }
 }

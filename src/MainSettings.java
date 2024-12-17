@@ -1,6 +1,12 @@
 import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import java.awt.*;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -16,6 +22,7 @@ public class MainSettings {
     public static ArrayList<String> NumberType = new ArrayList<>();
 
     public static HashMap<String, Image> IMGAsset = new HashMap<>();
+    public static HashMap<String, String> SOUNDAsset = new HashMap<>();
     private HashMap<String, String> PathAsset = new HashMap<>();
 
     public MainSettings() {
@@ -43,6 +50,7 @@ public class MainSettings {
         //Image Paths
         PathAsset.put("Banner", "/Asset/Images/Banner.png");
 
+        //Image Loader
         for (var a : PathAsset.entrySet()) {
 
             Image img;
@@ -58,6 +66,15 @@ public class MainSettings {
                 IMGAsset.put(a.getKey(), img);
             }
         }
+
+        //Sound Paths
+
+        SOUNDAsset.put("Dig", "/Asset/Sounds/Dig.wav");
+
+        for (int i=1; i<=4; i++) {
+            SOUNDAsset.put("Danger" + i, "/Asset/Sounds/Danger" + i + ".wav");
+        }
+
 
     }
 }
