@@ -22,6 +22,13 @@ public class MainModule {
         );
     }
 
+    public static long getDoubleClock() {
+        long TheClock = System.nanoTime();
+
+
+        return TheClock;
+    }
+
     public static void PlaySound(MainSettings mySettings, String str) {
         if (mySettings.SOUNDAsset.get(str) != null) {
             try (InputStream inputstream = MainModule.class.getResourceAsStream(mySettings.SOUNDAsset.get(str))) {

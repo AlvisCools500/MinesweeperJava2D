@@ -1,21 +1,16 @@
 import javax.imageio.ImageIO;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
 import java.awt.*;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MainSettings {
-    public static final int GridX = 10;
-    public static final int GridY = 10;
+    public static final int GridX = 8;
+    public static final int GridY = 8;
+    public static final int CellSize = 50;
     public static final double MultiplyMines = 0.16;
 
-    public static final Vector2 Resolution = new Vector2(800, 800);
+    public static Vector2Int Resolution = new Vector2Int((GridX * CellSize) + CellSize, (GridY * CellSize) + CellSize);
 
     public static ArrayList<Color> TileColor = new ArrayList<>();
     public static ArrayList<Color> WarnColor = new ArrayList<>();
@@ -25,11 +20,14 @@ public class MainSettings {
     public static HashMap<String, String> SOUNDAsset = new HashMap<>();
     private HashMap<String, String> PathAsset = new HashMap<>();
 
-    public MainSettings() {
+    public MainSettings() {}
+
+    public void OpenResource() {
         // Set Tile Color
         TileColor.add(new Color(255, 230, 115)); // Sand [0]
         TileColor.add(new Color(107, 255, 92)); // Grass [1]
         TileColor.add(new Color(255, 139, 139)); // Mine [2]
+        TileColor.add(new Color(16, 158, 0)); // Grass-Side [3]
 
         // Warn Color
         WarnColor.add(new Color(255,255,255)); // 0
@@ -74,7 +72,7 @@ public class MainSettings {
         for (int i=1; i<=4; i++) {
             SOUNDAsset.put("Danger" + i, "/Asset/Sounds/Danger" + i + ".wav");
         }
-
-
     }
+
+
 }

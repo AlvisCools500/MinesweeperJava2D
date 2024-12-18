@@ -1,54 +1,101 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Random;
 
-public class MainCanvas extends JPanel {
+class DropParticle {
+    private Vector2Double CurrPos, SPos, Vpos;
+    double timeEnd;
+    double Clock;
+    double size;
+    Color col;
+    private double StartSize;
+    private double TargSize;
 
-    private final int MaxRow = MainSettings.GridY;
-    private final int MaxColl = MainSettings.GridX;
-    private final int CellSiz = 50;
+    public DropParticle(Vector2Double startPos, Vector2Double endPos, Color Col, double Size, double timeEnd) {
+        this.CurrPos = startPos;
+        this.SPos = startPos;
+        this.Vpos = endPos;
+        this.timeEnd = timeEnd;
+        this.Clock = MainModule.getDoubleClock();
+        this.size = Size;
+        this.TargSize = 0;
+        this.StartSize = size;
+        this.col = Col;
 
-    GeneratedGrid genGrid = MainModule.genGrid;
-    HashMap<Integer, HashMap<Integer, Integer>> DataGrid = genGrid.DataGrid;
-    HashMap<Integer, HashMap<Integer, Integer>> GameGrid = genGrid.GameGrid;
-    HashMap<Integer, HashMap<Integer, Integer>> FlagSlot = new HashMap<>();
-    ArrayList<GridSlot> MinesSlot = genGrid.MineSlot;
+    }
 
-    MainSettings mySettings = new MainSettings();
+    public void update(double alpha) {
 
-    private final int ResolutionX = mySettings.Resolution.x;
-    private final int ResolutionY = mySettings.Resolution.y;
 
-    private final Vector2 CenterPos = new Vector2(
-            (ResolutionX/2) - (CellSiz/2),
-            (ResolutionY/2) - (CellSiz/2)
-    );
+        Vector2Double AddingTemp = new Vector2Double(
+                (Vpos.x - SPos.x) * alpha,
+                (Vpos.y - SPos.y) * alpha
+        );
+
+
+        this.CurrPos = new Vector2Double(SPos.x, SPos.y);
+        this.CurrPos.plus(AddingTemp);
+
+        this.size = StartSize + (TargSize - StartSize) * alpha;
+    }
+
+    public Vector2Double position() {
+        Vector2Double ResPos = new Vector2Double(CurrPos.x, CurrPos.y);
+        //ResPos.substract(new Vector2Double(this.size/2, this.size/2));
+
+        return ResPos;
+    }
+
+
+}
+
+public class MainCanvas extends JPanel implements Runnable{
+
+    Random rand = new Random();
 
     ArrayList<SlotButton> ListButtons = new ArrayList<>();
-    HashMap<Integer, HashMap<Integer, Vector2>> GridLayout = new HashMap<>();
+    HashMap<Integer, HashMap<Integer, Vector2Int>> GridLayout = new HashMap<>();
+    ArrayList<DropParticle> dropList = new ArrayList<>();
 
-    private Random rand = new Random();
+    Thread mainThread;
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g); // Clear the canvas before drawing
+        super.paintComponent(g);
+
+        // Draw Main
         for (SlotButton MyButton : ListButtons) {
             MyButton.draw(g);
         }
 
-        g.setColor(Color.BLACK);
-        g.drawLine(100, 200, 300, 400);
+        // Draw DropParticle
+        for (int i=dropList.size() - 1; i>=0; i--) {
+            DropParticle v = dropList.get(i);
+
+            g.setColor(v.col);
+            g.fillRect((int) v.position().x, (int) v.position().y, (int) v.size, (int) v.size);
+        }
+
+
     }
 
-    public MainCanvas() {
-        //GridLib.Print(DataGrid, mySettings.NumberType, FlagSlot);
+    public MainCanvas(GeneratedGrid genGrid, HashMap<Integer, HashMap<Integer, Integer>> FlagSlot, MainSettings mySettings) {
+        final int MaxRow = MainSettings.GridY;
+        final int MaxColl = MainSettings.GridX;
+        final int CellSiz = MainSettings.CellSize;
 
-        Vector2 StartPos = new Vector2(
+        final int ResolutionX = mySettings.Resolution.x;
+        final int ResolutionY = mySettings.Resolution.y;
+
+        final Vector2Int CenterPos = new Vector2Int(
+                (ResolutionX/2) - (CellSiz/2),
+                (ResolutionY/2) - (CellSiz/2)
+        );
+
+        final Vector2Int StartPos = new Vector2Int(
                 CenterPos.x - (MaxRow * CellSiz) / 2,
                 CenterPos.y - (MaxColl * CellSiz) / 2
         );
@@ -58,12 +105,12 @@ public class MainCanvas extends JPanel {
         boolean isLight = false;
 
         for (int rows=1; rows<=MaxRow; rows++) {
-            HashMap<Integer, Vector2> GridY = new HashMap<>();
+            HashMap<Integer, Vector2Int> GridY = new HashMap<>();
             for (int colls=1; colls<=MaxColl; colls++) {
-                int x = StartPos.x + colls * CellSiz;
-                int y = StartPos.y + rows * CellSiz;
+                int x = (colls * CellSiz) - CellSiz/2;
+                int y = (rows * CellSiz) - CellSiz/2;
 
-                GridY.put(colls, new Vector2(x, y));
+                GridY.put(colls, new Vector2Int(x, y));
 
                 SlotButton MyButton = new SlotButton(
                         x,
@@ -71,10 +118,11 @@ public class MainCanvas extends JPanel {
                         CellSiz,
                         new Color(rand.nextInt(1,255), rand.nextInt(1,255), rand.nextInt(1,255)),
                         isLight,
-                        new Vector2(rows, colls),
+                        new Vector2Int(rows, colls),
                         genGrid,
                         FlagSlot,
-                        mySettings
+                        mySettings,
+                        dropList
                 );
 
                 MyButton.ID = incrID;
@@ -100,26 +148,73 @@ public class MainCanvas extends JPanel {
             GridLayout.put(rows, GridY);
         }
 
-        GridLib.Mine(GameGrid, DataGrid, genGrid.StartSlotX, genGrid.StartSlotZ);
+        StartThread();
+    }
 
-        addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                super.mousePressed(e);
+    public void StartThread() {
+        mainThread = new Thread(this);
+        mainThread.start();
+    }
 
-                repaint();
+    @Override
+    public void run() {
+        while (mainThread != null) {
+            double MyClock = MainModule.getDoubleClock();
+
+            // Draw
+            repaint();
+
+            // DropParticle Handler
+
+
+            if (dropList.size() > 0) {
+
+                for (int i=dropList.size() - 1; i>= 0; i--) {
+                    DropParticle v = dropList.get(i);
+
+                    double TotalAlpha = Math.clamp(((MyClock - v.Clock) / 1e9) / v.timeEnd, 0, 1);
+
+                    if (TotalAlpha >= 1) {
+                        dropList.remove(i);
+                    } else {
+
+                        v.update(TotalAlpha);
+                    }
+
+
+
+                }
+
+
             }
-        });
 
-        repaint();
+        }
     }
 
     public static void main(String[] args) {
+        // Initiate Values
         MainSettings mySettings = new MainSettings();
+        mySettings.OpenResource();
+
+        GeneratedGrid genGrid = MainModule.genGrid;
+        HashMap<Integer, HashMap<Integer, Integer>> DataGrid = genGrid.DataGrid;
+        HashMap<Integer, HashMap<Integer, Integer>> GameGrid = genGrid.GameGrid;
+        HashMap<Integer, HashMap<Integer, Integer>> FlagSlot = new HashMap<>();
+        ArrayList<GridSlot> MinesSlot = genGrid.MineSlot;
+
+        // Run Frame
         JFrame frame = new JFrame("Minesweeper Java 2D");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(mySettings.Resolution.x, mySettings.Resolution.y);
-        frame.add(new MainCanvas()); // Add the canvas to the frame
+        frame.add(new MainCanvas(genGrid, FlagSlot, mySettings)); // Add the canvas to the frame
         frame.setVisible(true);
+
+        GridLib.Mine(GameGrid, DataGrid, genGrid.StartSlotX, genGrid.StartSlotZ);
+
+
     }
+
+
+
+
 }
